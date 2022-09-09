@@ -204,6 +204,25 @@ class VsRateLimiterMongoStore {
     console.warn(`Collection not found, so no points consumed for key(${key})`);
     return rlDocument;
   }
+
+  /**
+   * reset
+   */
+  public async reset(key: string): Promise<boolean | never> {
+    const rlCollection = await this.getCollection();
+    if (rlCollection) {
+      return rlCollection
+        .findOneAndDelete({ _id: key })
+        .then((result: ModifyResult) => result.ok === 1)
+        .catch(error => {
+          throw error;
+        });
+    }
+    console.warn(
+      `Collection not found, so cannot reset rate limit for key(${key})`
+    );
+    return false;
+  }
 }
 
 export default VsRateLimiterMongoStore;

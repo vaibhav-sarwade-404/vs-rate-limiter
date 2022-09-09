@@ -101,3 +101,10 @@ export declare type RateLimitDocument = {
 export declare type GenericObject = {
     [key: string]: any;
 };
+export declare type VsRateLimiterMiddleware = {
+    (req: Request, resp: Response, next: NextFunction): Promise<void>;
+    /**
+     * Function to reset rate limit
+     */
+    reset: (key: string) => Promise<boolean | never>;
+};

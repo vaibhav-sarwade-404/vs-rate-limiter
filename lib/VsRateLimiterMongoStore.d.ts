@@ -27,5 +27,9 @@ declare class VsRateLimiterMongoStore {
      * consume
      */
     consume(key: string, points?: number): Promise<RateLimitDocument>;
+    /**
+     * reset
+     */
+    reset(key: string): Promise<boolean | never>;
 }
 export default VsRateLimiterMongoStore;

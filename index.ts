@@ -1,40 +1,33 @@
-import express, { NextFunction, Request, Response } from "express";
-import { MongoClient } from "mongodb";
+import { Request, Response, NextFunction } from "express";
+import express from "express";
 
 import VsRateLimiter from "./src";
 
 (async () => {
   const app = express();
-  const client = await MongoClient.connect(
-    "mongodb://localhost:27017/vs-rate-limiter"
-  );
 
-  const collection = client.db().collection("test");
-
-  const genericRateLimiter = VsRateLimiter({
+  const loginRateLimit = VsRateLimiter({
     url: "mongodb://localhost:27017/vs-rate-limiter",
-    collectionName: "rateLimit",
+    collectionName: "loginRateLimit",
     loggerLevel: "debug",
     limit: 10,
-    resetInSeconds: 10,
     responseMsg: { msg: "Too many requests" },
     updateExpiryOnConsumption: false,
     keepOnConsumingAfterRLHit: true,
-    tarpitTimeStepInSeconds: 0,
-    keyGenerator: (req: Request) => {
-      return req.ip;
-    },
-    whiteLister: (req: Request) => {
-      return false;
-    },
-    responseHandler: (req: Request, resp: Response, next: NextFunction) => {
-      return resp.status(429).send("blahhh");
+    tarpitTimeStepInSeconds: 10,
+    responseHandler: (req: Request, resp: Response) => {
+      // Block user IP
+      return resp.send("Too many request");
     }
   });
-  app.use(genericRateLimiter);
 
-  app.get("/", (_req: Request, res: Response) => {
-    res.send("ok");
+  app.get("/login", loginRateLimit, async (req: Request, resp: Response) => {
+    return resp.send("Vs Rate limiter World!");
+  });
+
+  app.get("/reset", (req, res) => {
+    loginRateLimit.reset(req.ip);
+    res.send("Vs Rate limiter World!");
   });
 
   app.listen(3000, () => console.log(`App is listening on port 3000`));

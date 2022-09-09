@@ -2,10 +2,18 @@
 
 This is simple rate limit express middleware implementation with mongo DB.
 
+## Description
+
+VsRateLimiter constructor will always return express middleware and additional function `reset` to reset rate limit for provided key.
+
 ## Usage
 
 ```
 const VsRateLimiter = required("@vs-org/rate-limiter");
+
+const keyGenerator = (req) => {
+  return req.ip;
+}
 
 const genericRateLimiter = VsRateLimiter({
   url: "mongodb://localhost:27017/vs-rate-limiter",
@@ -16,13 +24,11 @@ const genericRateLimiter = VsRateLimiter({
   updateExpiryOnConsumption: false,
   keepOnConsumingAfterRLHit: true,
   tarpitTimeStepInSeconds: 0,
-  keyGenerator: (req: Request) => {
-    return req.ip;
-  },
-  whiteLister: (req: Request) => {
+  keyGenerator,
+  whiteLister: (req) => {
     return false;
   },
-  responseHandler: (req: Request, resp: Response, next: NextFunction) => {
+  responseHandler: (req, resp, next) => {
     return resp.status(429).send("blahhh");
   }
 });
@@ -30,6 +36,58 @@ app.use(genericRateLimiter);
 
 ```
 
+<br/>
+
+## Examples
+
+1. Custom rate limit for different flows and reset
+
+```
+
+const loginRateLimit = VsRateLimiter({
+    url: "mongodb://localhost:27017/vs-rate-limiter",
+    collectionName: "loginRateLimit",
+    loggerLevel: "debug",
+    limit: 10,
+    responseMsg: { msg: "Too many requests" },
+    updateExpiryOnConsumption: false,
+    keepOnConsumingAfterRLHit: true,
+    tarpitTimeStepInSeconds: 10,
+    responseHandler: (req: Request, resp: Response) => {
+      // ... operation for user like blocking IP and sending email
+      return resp.send("Too many request");
+    }
+  });
+
+app.get("/login", loginRateLimit, async (req, resp) => {
+  return resp.send("login successful response");
+});
+
+
+/**
+* 1. If user is blocked and connot login and has received email of blocked IP.
+* 2. User can interact through email to unblock account and reset rate limit
+*    (This is important if not rate limit is not cleared for user, user cannot login even after unbloking account)
+*/
+
+app.get("/unblock-user", async (req, resp) => {
+  loginRateLimit.reset(keyGenerator(req));
+  return resp.send("unblock successful response");
+});
+
+/**
+* 1. If user is blocked and connot login and has received email of blocked IP.
+* 2. User can decide to reset password through email, and reset rate limit should be cleared
+*/
+
+app.get("/reset-password", async (req, resp) => {
+  loginRateLimit.reset(keyGenerator(req));
+  return resp.send("reset password successful response");
+});
+
+```
+
+<br/>
 ## Options
 
 | option                      | required | Description                                                                                                                                                                                                                                                                                                                                                                                                                                           |
@@ -54,7 +112,7 @@ app.use(genericRateLimiter);
 
 ## License
 
-MIT (see [LICENSE](https://github.com/vaibhav-sarwade-404/vs-random/blob/main/LICENSE))
+MIT (see [LICENSE](https://github.com/vaibhav-sarwade-404/vs-rate-limiter/blob/main/LICENSE))
 
 ## Note
 
